@@ -1,0 +1,29 @@
+# Binarios para programas y complementos
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Directorio de prueba
+_test.go
+
+# Archivos de salida
+*.out
+
+# Dependencias
+/vendor/
+
+# Archivos de sistema
+.DS_Store
+
+# Archivos de IDE
+.idea/
+*.iml
+
+# Archivos de Go
+*.o
+*.a
+*.test
+
+/environment/
