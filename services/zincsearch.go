@@ -14,6 +14,7 @@ import (
 type Body struct {
 	SearchType string `json:"search_type"`
 	Query      QueryS `json:"query"`
+	From       int    `json:"from"`
 	MaxResults int    `json:"max_results"`
 }
 
@@ -28,7 +29,8 @@ func Search(bdy *models.SearchBody) map[string]interface{} {
 	password := os.Getenv("PASSWORD_ZINCSEARCH")
 	b := Body{
 		SearchType: bdy.TypeSearch,
-		MaxResults: 20,
+		From:       bdy.From,
+		MaxResults: bdy.MaxResults,
 		Query: QueryS{
 			Term: bdy.Term,
 		},

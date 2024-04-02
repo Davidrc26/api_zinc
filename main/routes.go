@@ -8,6 +8,7 @@ import (
 	"github.com/Davidrc26/api_zinc.git/services"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/rs/cors"
 )
 
 func Routes() *chi.Mux {
@@ -18,8 +19,20 @@ func Routes() *chi.Mux {
 		middleware.Logger,    //log every http request
 		middleware.Recoverer, // recover if a panic occurs
 	)
+	cors := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Permite todas las origenes
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	})
 
-	mux.Post("/search", searchHandler)
+	mux.Route("/api", func(r chi.Router) {
+		r.Use(cors.Handler)
+		r.Post("/search", searchHandler)
+	})
+	/* mux.Post("/search", searchHandler) */
 
 	return mux
 }
