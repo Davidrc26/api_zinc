@@ -24,7 +24,7 @@ type QueryS struct {
 
 const BASE_URL = "http://localhost:4080/api/"
 
-func Search(bdy *models.SearchBody) map[string]interface{} {
+func Search(bdy *models.SearchBody) (map[string]interface{}, error) {
 	usr := os.Getenv("USER_ZINCSEARCH")
 	password := os.Getenv("PASSWORD_ZINCSEARCH")
 	b := Body{
@@ -37,25 +37,25 @@ func Search(bdy *models.SearchBody) map[string]interface{} {
 	}
 	jsonData, err := json.Marshal(b)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	req, err := http.NewRequest("POST", BASE_URL+"maildir/_search", bytes.NewReader(jsonData))
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	req.SetBasicAuth(usr, password)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	log.Println(resp.StatusCode)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	bodyReader := io.NopCloser(bytes.NewBuffer(body))
 	/* fmt.Println(string(body)) */
@@ -63,10 +63,10 @@ func Search(bdy *models.SearchBody) map[string]interface{} {
 	var result map[string]interface{}
 	err = json.NewDecoder(bodyReader).Decode(&result)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return result
+	return result, nil
 }
 
 func GetIndexByName(name string) []string {

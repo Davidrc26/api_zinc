@@ -45,7 +45,12 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		m := map[string]interface{}{"msg": "Error realizando la busqueda"}
 		_ = json.NewEncoder(w).Encode(m)
 	}
-	res := services.Search(body)
+	res, err := services.Search(body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		m := map[string]interface{}{"msg": "Error en el servidor. Detalles: \n" + err.Error()}
+		_ = json.NewEncoder(w).Encode(m)
+	}
 	_ = json.NewEncoder(w).Encode(res)
 }
 
