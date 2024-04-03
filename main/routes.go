@@ -14,25 +14,23 @@ import (
 func Routes() *chi.Mux {
 	mux := chi.NewMux()
 
-	// globals middleware
 	mux.Use(
-		middleware.Logger,    //log every http request
-		middleware.Recoverer, // recover if a panic occurs
+		middleware.Logger,
+		middleware.Recoverer,
 	)
 	cors := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // Permite todas las origenes
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
+		MaxAge:           300,
 	})
 
 	mux.Route("/api", func(r chi.Router) {
 		r.Use(cors.Handler)
 		r.Post("/search", searchHandler)
 	})
-	/* mux.Post("/search", searchHandler) */
 
 	return mux
 }
@@ -66,12 +64,3 @@ func parseBody(r *http.Request) (*models.SearchBody, error) {
 
 	return &searchParams, nil
 }
-
-/* func helloHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("done-by", "tomas")
-
-	res := map[string]interface{}{"message": "hello world"}
-
-	_ = json.NewEncoder(w).Encode(res)
-} */
