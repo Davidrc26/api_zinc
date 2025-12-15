@@ -11,89 +11,133 @@ import (
 	"github.com/Davidrc26/api_zinc.git/models"
 )
 
-type Body struct {
-	SearchType string `json:"search_type"`
-	Query      QueryS `json:"query"`
-	From       int    `json:"from"`
-	MaxResults int    `json:"max_results"`
+var base_url = ""
+var usr = ""
+var password = ""
+
+func Init() {
+	if base_url != "" {
+		return
+	}
+	base_url = os.Getenv("BASE_URL_ZINCSEARCH")
+	usr = os.Getenv("USER_ZINCSEARCH")
+	password = os.Getenv("PASSWORD_ZINCSEARCH")
 }
 
-type QueryS struct {
-	Term string `json:"term"`
-}
+func Search(bdy *models.SearchBody) models.Response {
 
-const BASE_URL = "http://localhost:4080/api/"
+	if bdy.MaxResults <= 0 {
+		return models.Response{
+			Status:  400,
+			Message: "MaxResults debe ser mayor a 0",
+			Result:  nil,
+		}
+	}
+	if bdy.From < 0 {
+		return models.Response{
+			Status:  400,
+			Message: "From no puede ser negativo",
+			Result:  nil,
+		}
+	}
 
-func Search(bdy *models.SearchBody) (map[string]interface{}, error) {
-	usr := os.Getenv("USER_ZINCSEARCH")
-	password := os.Getenv("PASSWORD_ZINCSEARCH")
-	b := Body{
+	b := models.Body{
 		SearchType: bdy.TypeSearch,
 		From:       bdy.From,
 		MaxResults: bdy.MaxResults,
-		Query: QueryS{
+		Query: models.QueryS{
 			Term: bdy.Term,
 		},
 	}
 	jsonData, err := json.Marshal(b)
 	if err != nil {
-		return nil, err
+		return models.Response{
+			Status:  500,
+			Message: "Error al serializar la petición: " + err.Error(),
+			Result:  nil,
+		}
 	}
-	req, err := http.NewRequest("POST", BASE_URL+"maildir/_search", bytes.NewReader(jsonData))
-	if err != nil {
-		return nil, err
-	}
-	req.SetBasicAuth(usr, password)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	log.Println(resp.StatusCode)
-
+	resp := SendRequest("POST", "maildir/_search", jsonData)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return models.Response{
+			Status:  500,
+			Message: "Error al leer la respuesta de ZincSearch: " + err.Error(),
+			Result:  nil,
+		}
 	}
 	bodyReader := io.NopCloser(bytes.NewBuffer(body))
-	/* fmt.Println(string(body)) */
-
 	var result map[string]interface{}
 	err = json.NewDecoder(bodyReader).Decode(&result)
 	if err != nil {
-		return nil, err
+		return models.Response{
+			Status:  500,
+			Message: "Error al decodificar la respuesta de ZincSearch: " + err.Error(),
+			Result:  nil,
+		}
 	}
-
-	return result, nil
+	return models.Response{
+		Status:  200,
+		Message: "Búsqueda exitosa",
+		Result:  result,
+	}
 }
 
 func GetIndexByName(name string) []string {
-	usr := os.Getenv("USER_ZINCSEARCH")
-	password := os.Getenv("PASSWORD_ZINCSEARCH")
-
-	req, err := http.NewRequest("GET", BASE_URL+"index_name?name="+name, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.SetBasicAuth(usr, password)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	log.Println(resp.StatusCode)
-
+	resp := SendRequest("POST", "index_name?name="+name, nil)
 	var result []string
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return result
-	/* fmt.Println(string(body)) */
+}
 
+func BulkIndex(jsonData []byte) models.Response {
+
+	resp := SendRequest("POST", "_bulkv2", jsonData)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return models.Response{
+			Status:  500,
+			Message: "Error al leer la respuesta de ZincSearch: " + err.Error(),
+			Result:  nil,
+		}
+	}
+	bodyReader := io.NopCloser(bytes.NewBuffer(body))
+	var result map[string]interface{}
+	err = json.NewDecoder(bodyReader).Decode(&result)
+	if err != nil {
+		return models.Response{
+			Status:  500,
+			Message: "Error al decodificar la respuesta de ZincSearch: " + err.Error(),
+			Result:  nil,
+		}
+	}
+
+	return models.Response{
+		Status:  200,
+		Message: "Indexación exitosa",
+		Result:  result,
+	}
+
+}
+
+func SendRequest(action_type string, endpoint string, jsonData []byte) http.Response {
+	Init()
+	req, err := http.NewRequest(action_type, base_url+endpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.SetBasicAuth(usr, password)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	log.Println(resp.StatusCode)
+	return *resp
 }
