@@ -15,11 +15,11 @@ import (
 )
 
 func StartIndexing() {
-	maildir := "./data/maildir"
+	maildir := "data/maildir"
 	files, err := os.ReadDir(maildir)
 
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return
 	}
 
@@ -107,6 +107,7 @@ func ProcessFile(file string) models.Email {
 
 	scanner := bufio.NewScanner(f)
 	data := models.Email{}
+	data.FilePath = file
 	buf := make([]byte, 0, bufferCapacity)
 	scanner.Buffer(buf, bufferCapacity)
 	inHeaders := true

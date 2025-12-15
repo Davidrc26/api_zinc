@@ -50,4 +50,5 @@ type Email struct {
 	X_FileName                string    `json:"X-FileName"`
 	Cc                        string    `json:"Cc"`
 	Body                      string    `json:"Body"`
+	FilePath                  string    `json:"file_path"`
 }

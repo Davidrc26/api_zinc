@@ -19,7 +19,7 @@ func Init() {
 	if base_url != "" {
 		return
 	}
-	base_url = os.Getenv("BASE_URL_ZINCSEARCH")
+	base_url = os.Getenv("ZINCSEARCH_URL")
 	usr = os.Getenv("USER_ZINCSEARCH")
 	password = os.Getenv("PASSWORD_ZINCSEARCH")
 }
@@ -58,6 +58,13 @@ func Search(bdy *models.SearchBody) models.Response {
 		}
 	}
 	resp := SendRequest("POST", "maildir/_search", jsonData)
+	if resp == nil {
+		return models.Response{
+			Status:  500,
+			Message: "Error al enviar la petición a ZincSearch",
+			Result:  nil,
+		}
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return models.Response{
@@ -95,7 +102,14 @@ func GetIndexByName(name string) []string {
 
 func BulkIndex(jsonData []byte) models.Response {
 
-	resp := SendRequest("POST", "_bulkv2", jsonData)
+	resp := SendRequest("POST", "/_bulkv2", jsonData)
+	if resp == nil {
+		return models.Response{
+			Status:  500,
+			Message: "Error al enviar la petición de indexación a ZincSearch",
+			Result:  nil,
+		}
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return models.Response{
@@ -123,11 +137,13 @@ func BulkIndex(jsonData []byte) models.Response {
 
 }
 
-func SendRequest(action_type string, endpoint string, jsonData []byte) http.Response {
+func SendRequest(action_type string, endpoint string, jsonData []byte) *http.Response {
 	Init()
 	req, err := http.NewRequest(action_type, base_url+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(string(jsonData))
+		log.Fatal("Error creating request:", err)
+		return nil
 	}
 
 	req.SetBasicAuth(usr, password)
@@ -135,9 +151,10 @@ func SendRequest(action_type string, endpoint string, jsonData []byte) http.Resp
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error sending request:", err.Error())
+		return nil
 	}
 	defer resp.Body.Close()
 	log.Println(resp.StatusCode)
-	return *resp
+	return resp
 }
