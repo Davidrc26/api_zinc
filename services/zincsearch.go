@@ -48,6 +48,7 @@ func Search(bdy *models.SearchBody) models.Response {
 		Query: models.QueryS{
 			Term: bdy.Term,
 		},
+		Sort: []any{"Date:desc"},
 	}
 	jsonData, err := json.Marshal(b)
 	if err != nil {
@@ -57,7 +58,7 @@ func Search(bdy *models.SearchBody) models.Response {
 			Result:  nil,
 		}
 	}
-	resp := SendRequest("POST", "maildir/_search", jsonData)
+	resp := SendRequest("POST", "/maildir/_search", jsonData)
 	if resp == nil {
 		return models.Response{
 			Status:  500,
@@ -65,6 +66,7 @@ func Search(bdy *models.SearchBody) models.Response {
 			Result:  nil,
 		}
 	}
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return models.Response{
@@ -92,6 +94,11 @@ func Search(bdy *models.SearchBody) models.Response {
 
 func GetIndexByName(name string) []string {
 	resp := SendRequest("POST", "index_name?name="+name, nil)
+	if resp == nil {
+		log.Fatal("Error al obtener índice")
+		return nil
+	}
+	defer resp.Body.Close()
 	var result []string
 	err := json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
@@ -110,6 +117,7 @@ func BulkIndex(jsonData []byte) models.Response {
 			Result:  nil,
 		}
 	}
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return models.Response{
@@ -154,7 +162,5 @@ func SendRequest(action_type string, endpoint string, jsonData []byte) *http.Res
 		log.Fatal("Error sending request:", err.Error())
 		return nil
 	}
-	defer resp.Body.Close()
-	log.Println(resp.StatusCode)
 	return resp
 }

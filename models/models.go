@@ -14,6 +14,7 @@ type Body struct {
 	Query      QueryS `json:"query"`
 	From       int    `json:"from"`
 	MaxResults int    `json:"max_results"`
+	Sort       []any  `json:"sort,omitempty"`
 }
 
 type QueryS struct {
